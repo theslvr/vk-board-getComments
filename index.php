@@ -1,6 +1,7 @@
 <?php // стили взяты с ВКонтакте, чтоб визуально было похоже на стену ВК ?>
 <style>
     .bp_post {
+        color:#363636;
         padding: 15px 0;
         margin-top: -1px;
         border: solid #e7e8ec;
@@ -34,68 +35,144 @@
     }
     a.bp_date {
         color: #939393;
+        font-size:11px;
+        
     }
+    a.img.imgvk, img.imgvk {
+        height:150px;
+        margin:5px;    
+    }
+    
+@media only screen and (max-width: 479px) {
+    a.img.imgvk, img.imgvk {
+        max-height:90px;
+        max-width:120px;
+        margin:3px;    
+    }
+    
+    .bp_thumb, .bp_img {
+        width: 40px;
+        height: 40px;
+    } 
+    .bp_info {
+        margin-left: 50px;
+    }    
+}
 </style>
 <?php
-$token = ""; // access_token - Как получить токен, описано в документации ВК
-$group_id = 12345; // ID Группы
-$topic_id = 12345; // ID Топика
 
-$get_count = curl('https://api.vk.com/method/board.getComments?group_id='.$group_id.'&topic_id='.$topic_id.'&v=5.60&access_token='.$token);
-$jsonGetCount = json_decode($get_count,true);
-$count = $jsonGetCount['response']['count'];
+// https://vk.com/dev/board.getComments - Документация
+
+$token = ""; // access_token - Как получить токен описано в документации ВК
+$group_id = 1; // ID Группы
+$topic_id = 35487172; // ID Топика
+
+$count = 100; // кол-во нужных записей. Положительное число, по умолчанию 20, максимальное значение 100
+$sort = 'asc'; // asc — хронологический / desc — антихронологический
+
+// раскомментировать по необходимости
+// $get_count = curl('https://api.vk.com/method/board.getComments?group_id='.$group_id.'&topic_id='.$topic_id.'&v=5.60&access_token='.$token);
+// $jsonGetCount = json_decode($get_count,true);
+// $count = $jsonGetCount['response']['count']; // данные по кол-ву записей, если вдруг нужно будет больше 100
+
+$get = curl('https://api.vk.com/method/board.getComments?group_id='.$group_id.'&topic_id='.$topic_id.'&extended=1'.'&count='.$count.'&sort='.$sort.'&v=5.60&lang=ru&access_token='.$token);
+$jsonGet = json_decode($get,true);
+
+if(!empty($jsonGet['response']['groups'][0])) {
+    $groupsId = $jsonGet['response']['groups'][0]['id']; // id группы
+    $groupsName = $jsonGet['response']['groups'][0]['name']; // название группы
+    $groupsPhoto = $jsonGet['response']['groups'][0]['photo_50']; // фото 
+}
 ?>
+
 <div class="wall_module">
     <?php
-    for ($i = 1; $i <= $count; $i++) {
-        $get = curl('https://api.vk.com/method/board.getComments?group_id='.$group_id.'&topic_id='.$topic_id.'&extended=1'.'&offset='.$i.'&count=1&v=5.60&access_token='.$token);
-        $jsonGet = json_decode($get,true);
+    foreach ($jsonGet['response']['items'] as $value) : 
+        $userId = (string)$value['from_id']; // ID Автора
+        $date = $value['date']; // Дата в unixtime
+        $text = $value['text']; // Текст
 
-        $user_id = $jsonGet['response']['items'][0]['from_id']; // ID Автора
-        $date = $jsonGet['response']['items'][0]['date']; // Дата в unixtime
-        $text = $jsonGet['response']['items'][0]['text']; // Текст
-        $attachments = $jsonGet['response']['items'][0]['attachments']; // Прикрепленные файлы к записи
-        $photo = $jsonGet['response']['profiles'][0]['photo_50']; // Фото Автора (50,100 и т.д.)
-        $fname = $jsonGet['response']['profiles'][0]['first_name']; // Имя Автора
-        $lname = $jsonGet['response']['profiles'][0]['last_name']; // Фамилия Автора
-        ?>
-        <div class="bp_post clear_fix ">
-            <a class="bp_thumb" href="https://vk.com/id<?php echo $user_id; ?>">
+        $user = false;
+        $attachments = array();
+        unset($textFormated);
+
+        if ($userId[0] != '-') {
+            $user = true;
+            $profile = array_search($userId, array_column($jsonGet['response']['profiles'], 'id')); // Ищем автора в массиве profiles
+            $text = $value['text']; // Текст
+
+            $photo = $jsonGet['response']['profiles'][$profile]['photo_50']; // Фото Автора (50,100 и т.д.)
+            $fname = $jsonGet['response']['profiles'][$profile]['first_name']; // Имя Автора
+            $lname = $jsonGet['response']['profiles'][$profile]['last_name']; // Фамилия Автора
+        } 
+
+        // Прикрепленные фото
+        if(!empty($value['attachments'])) {
+            $attachments = $value['attachments']; 
+        }
+
+        // ответы на комментарии
+        if (strripos($text, "|")) {
+            $textArray = explode("|", $text);
+            $textFormated = str_replace("]","",$textArray[1]);
+        }
+    ?>
+    <div class="bp_post clear_fix ">
+        <?php if ($user) : ?>
+            <a class="bp_thumb" href="https://vk.com/id<?php echo $userId; ?>" target="_blank">
                 <img class="bp_img" alt="<?php echo $fname." ".$lname; ?>" src="<?php echo $photo ; ?>">
             </a>
-            <div class="bp_info">
-                <div class="bp_author_wrap">
-                    <a class="bp_author" href="https://vk.com/id<?php echo $user_id; ?>"><?php echo $fname." ".$lname; ?></a>
-                    <a class="bp_date" ><?php echo gmdate("Y-m-d", $date); ?></a>
-                    <span class="bp_topic"></span>
-                </div>
-                <div class="bp_content" id="">
+        <?php else :?>
+            <a class="bp_thumb" href="https://vk.com/club<?php echo $groupsId; ?>" target="_blank">
+                <img class="bp_img" alt="<?php echo $groupsName; ?>" src="<?php echo $groupsPhoto ; ?>">
+            </a>
+        <?php endif; ?>
+        <div class="bp_info">
+            <div class="bp_author_wrap">
+                <?php if ($user) : ?>
+                    <a class="bp_author" href="https://vk.com/id<?php echo $userId; ?>" target="_blank"><?php echo $fname." ".$lname; ?></a>
+                    <a class="bp_date" ><?php echo gmdate("d.m.Y", $date); ?></a>
+                <?php else :?>
+                    <a class="bp_author" href="https://vk.com/club<?php echo $groupsId; ?>" target="_blank"><?php echo $groupsName; ?></a>
+                    <a class="bp_date" ><?php echo gmdate("d.m.Y", $date); ?></a>
+                <?php endif; ?>
+                <span class="bp_topic"></span>
+            </div>
+            <div class="bp_content" id="">
+                <?php if(isset($textFormated)) :?>
+                    <div class="bp_text sl"><?php echo $textFormated; ?></div>
+                <?php else :?>
                     <div class="bp_text"><?php echo $text; ?></div>
-                    <div>
-                        <?php
-                        // проверяем, есть ли прикрепленые файлы в записи, далее берем только изображения, можно вывести опрос и т.п.
-                        if ($attachments) {
-                            foreach ($attachments as $attach) {
-                                echo '<a href="'.$attach['photo']['photo_1280'].'" target="_blank">';
-                                echo '<img src="'. $attach['photo']['photo_604'].'"height="223" style="margin:5px;">';
-                                echo '</a>';
-                            }
+                <?php endif;?>
+            <div>
+                <?php
+                // проверяем, есть ли прикрепленые файлы в записи, далее берем только изображения, можно вывести видео, опрос и т.д.
+                if (!empty($attachments)) {
+                    foreach ($attachments as $attach) {
+                        if($attach['type'] == 'photo') {
+                            echo '<a href="'.$attach['photo']['photo_604'].'">';
+                            echo '<img class="imgvk" src="'. $attach['photo']['photo_604'].'" >';
+                            echo '</a>';
                         }
-                        ?>
-                    </div>
-                </div>
+                    }
+                }
+                ?>
             </div>
         </div>
-        <?php
-    }
-    function curl($url) {
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        $response = curl_exec($ch);
-        curl_close($ch);
-        return $response;
-    }
-    ?>
+    </div>
 </div>
+    <?php endforeach; ?>
+</div>
+
+<?php
+// внимание! проверьте, что у вас на сервере есть curl
+function curl($url) {
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return $response;
+}
+?>
