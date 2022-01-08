@@ -75,19 +75,19 @@ $sort = 'asc'; // asc — хронологический / desc — антихр
 // $jsonGetCount = json_decode($get_count,true);
 // $count = $jsonGetCount['response']['count']; // данные по кол-ву записей, если вдруг нужно будет больше 100
 
-$get = curl('https://api.vk.com/method/board.getComments?group_id='.$group_id.'&topic_id='.$topic_id.'&extended=1'.'&count='.$count.'&sort='.$sort.'&v=5.60&lang=ru&access_token='.$token);
+$get = curl('https://api.vk.com/method/board.getComments?group_id='.$group_id.'&topic_id='.$topic_id.'&extended=1'.'&count='.$count.'&sort='.$sort.'&v=5.95&lang=ru&access_token='.$token);
 $jsonGet = json_decode($get,true);
 
 if(!empty($jsonGet['response']['groups'][0])) {
     $groupsId = $jsonGet['response']['groups'][0]['id']; // id группы
     $groupsName = $jsonGet['response']['groups'][0]['name']; // название группы
-    $groupsPhoto = $jsonGet['response']['groups'][0]['photo_50']; // фото 
+    $groupsPhoto = $jsonGet['response']['groups'][0]['photo_50']; // фото
 }
 ?>
 
 <div class="wall_module">
     <?php
-    foreach ($jsonGet['response']['items'] as $value) : 
+    foreach ($jsonGet['response']['items'] as $value) :
         $userId = (string)$value['from_id']; // ID Автора
         $date = $value['date']; // Дата в unixtime
         $text = $value['text']; // Текст
@@ -104,11 +104,11 @@ if(!empty($jsonGet['response']['groups'][0])) {
             $photo = $jsonGet['response']['profiles'][$profile]['photo_50']; // Фото Автора (50,100 и т.д.)
             $fname = $jsonGet['response']['profiles'][$profile]['first_name']; // Имя Автора
             $lname = $jsonGet['response']['profiles'][$profile]['last_name']; // Фамилия Автора
-        } 
+        }
 
         // Прикрепленные фото
         if(!empty($value['attachments'])) {
-            $attachments = $value['attachments']; 
+            $attachments = $value['attachments'];
         }
 
         // ответы на комментарии
