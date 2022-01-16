@@ -150,8 +150,8 @@ if(!empty($jsonGet['response']['groups'][0])) {
                 if (!empty($attachments)) {
                     foreach ($attachments as $attach) {
                         if($attach['type'] == 'photo') {
-                            echo '<a href="'.$attach['photo']['photo_604'].'">';
-                            echo '<img class="imgvk" src="'. $attach['photo']['photo_604'].'" >';
+                            echo '<a href="'.$attach['photo']['sizes'][4]['url'].'">';
+                            echo '<img class="imgvk" src="'. $attach['photo']['sizes'][4]['url'].'" >';
                             echo '</a>';
                         }
                     }
